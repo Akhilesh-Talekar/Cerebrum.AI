@@ -23,7 +23,7 @@ export const getAtsScore = async (data: atsProp) => {
     const buffer = Buffer.from(response.data);
     const { value: text } = await mammoth.extractRawText({ buffer });
 
-    // 🔹 Create the prompt (unchanged)
+    
     const prompt = `
 You are an Applicant Tracking System (ATS) designed to score resumes based on how well they match a given job description.
 
@@ -85,7 +85,7 @@ Check wether the skills match with the job description or not and if the resume 
 }
 `;
 
-    // 🔹 OpenAI call (replaces generateText)
+    
     const resp = await openai.responses.create({
       model: "gpt-4o-mini",
       input: prompt,
@@ -97,7 +97,7 @@ Check wether the skills match with the job description or not and if the resume 
     const lastBrace = jsonText.lastIndexOf("}");
     const jsonSubstring = jsonText.substring(firstBrace, lastBrace + 1);
 
-    // Parse the AI JSON response
+    
     const parsed = JSON.parse(jsonSubstring);
     return parsed;
   } catch (e: any) {
@@ -108,7 +108,7 @@ Check wether the skills match with the job description or not and if the resume 
 
 export const getCourseRecommendation = async (prompt: string) => {
   try {
-    // --- SAME PROMPT EXACTLY AS YOU WROTE ---
+    
     const fullPrompt = `
 You are a course recommendation system.
 Your job is to help users find the best and most relevant free YouTube videos for their learning goals or career interests.
@@ -135,7 +135,7 @@ Based on the user input below, respond strictly in as string format with the sea
 The user input is: ${prompt}
 `;
 
-    // --- OPENAI CALL ---
+    
     const resp = await openai.responses.create({
       model: "gpt-4o-mini",
       input: fullPrompt,
@@ -143,9 +143,7 @@ The user input is: ${prompt}
 
     const text = resp.output_text?.trim() ?? "";
 
-    // --------------------
-    // YOUTUBE SEARCH
-    // --------------------
+    
     const ytResponse = await axios.get(
       `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(
         text
@@ -171,7 +169,7 @@ export const getDetails = async (Id: string) => {
       .replace(/\s{2,}/g, " ") // fix multiple spaces
       .trim();
 
-    // 🔹 SAME PROMPT EXACTLY — NO CHANGES
+    
     const prompt = `You are a highly intelligent YouTube video summarization assistant.
 
 Your task is to analyze the **transcript** of a YouTube video and return a detailed JSON object with the following fields:
@@ -203,7 +201,7 @@ Transcript:
 """
 ${cleanDescription}`;
 
-    // 🔥 OPENAI CALL
+    
     const aiResp = await openai.responses.create({
       model: "gpt-4o-mini",
       input: prompt,
@@ -211,9 +209,7 @@ ${cleanDescription}`;
 
     const text = aiResp.output_text?.trim() ?? "";
 
-    // -------------------------
-    // JSON Extraction (same as before)
-    // -------------------------
+    
     const firstBrace = text.indexOf("{");
     const lastBrace = text.lastIndexOf("}");
     const jsonSubstring = text.substring(firstBrace, lastBrace + 1);
@@ -234,17 +230,17 @@ export const getCoverLetter = async (data: {
   try {
     const { Description, document, tone } = data;
 
-    // Fetch resume file
+    
     const response = await axios.get(document, {
       responseType: "arraybuffer",
     });
 
     const buffer = Buffer.from(response.data);
 
-    // Extract raw resume text
+    
     const { value: text } = await mammoth.extractRawText({ buffer });
 
-    // --- SAME PROMPT EXACTLY ---
+    
     const prompt = `
 You are a professional Cover Letter Generator.
 
