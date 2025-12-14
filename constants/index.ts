@@ -1,6 +1,8 @@
 // import { CreateAssistantDTO } from "@vapi-ai/web/dist/api";
 // import { z } from "zod";
 
+import { CreateAssistantDTO } from "@vapi-ai/web/dist/api";
+
 export const mappings = {
   "react.js": "react",
   reactjs: "react",
@@ -178,7 +180,7 @@ export const mappings = {
   firebasehosting: "firebase",
   cloudflare: "cloudflare",
   supabaseauth: "supabase",
-  planetScale: "planetscale"
+  planetScale: "planetscale",
 };
 
 // export const interviewer: CreateAssistantDTO = {
@@ -229,7 +231,6 @@ export const mappings = {
 // Thank the candidate for their time.
 // Inform them that the company will reach out soon with feedback.
 // End the conversation on a polite and positive note.
-
 
 // - Be sure to be professional and polite.
 // - Keep all your responses short and simple. Use official language, but be kind and welcoming.
@@ -338,3 +339,221 @@ export const dummyInterviews: Interview[] = [
     createdAt: "2024-03-14T15:30:00Z",
   },
 ];
+
+export const generator = {
+  name: "InterviewPrep",
+  nodes: [
+    {
+      name: "start",
+      type: "conversation",
+      isStart: true,
+      metadata: {
+        position: {
+          x: -278.4774475097656,
+          y: -45.87525939941406,
+        },
+      },
+      prompt:
+        "Greet the user with username as {{userName}} and help them create a new personalized ai interview",
+      voice: {
+        model: "aura-2",
+        voiceId: "theia",
+        provider: "deepgram",
+      },
+      variableExtractionPlan: {
+        output: [
+          {
+            title: "type",
+            description: "What type of the interview should it be? ",
+            type: "string",
+            enum: [],
+          },
+          {
+            title: "role",
+            description:
+              "What role should would you like to train for? For example Frontend, Backend, Fullstack, Design, UX?",
+            type: "string",
+            enum: [],
+          },
+          {
+            title: "level",
+            description: "The job experience level.",
+            type: "string",
+            enum: [],
+          },
+          {
+            title: "techstack",
+            description:
+              "A list of technologies to cover during the job interview. For example, React, Next.js, Express.js, Node and so on…",
+            type: "string",
+            enum: [],
+          },
+          {
+            title: "amount",
+            description: " How many questions would you like to generate?",
+            type: "number",
+            enum: [],
+          },
+          {
+            title: "companyName",
+            description: "Which company are you targeting for?",
+            type: "string",
+            enum: [],
+          },
+        ],
+      },
+      messagePlan: {
+        firstMessage: "Hey there!",
+      },
+    },
+    {
+      name: "conversation_1",
+      type: "conversation",
+      metadata: {
+        position: {
+          x: 33.522552490234375,
+          y: 270.2120056152344,
+        },
+      },
+      prompt:
+        "Thank the user for their cooperation and assure them the interview will be generated shortly.",
+      voice: {
+        model: "aura-2",
+        voiceId: "theia",
+        provider: "deepgram",
+        mipOptOut: false,
+      },
+      variableExtractionPlan: {
+        output: [],
+      },
+    },
+    {
+      name: "hangup_1747512399374",
+      type: "hangup",
+      metadata: {
+        position: {
+          x: 790.9724652759669,
+          y: 1000.5158808491688,
+        },
+      },
+      messagePlan: {
+        firstMessage: "Alright, have a nice day!",
+      },
+    },
+    {
+      name: "apiRequest_1747809152762",
+      type: "apiRequest",
+      metadata: {
+        position: {
+          x: 259.52255249023443,
+          y: 488.2120056152344,
+        },
+      },
+      method: "POST",
+      url: "https://cerebrumai.vercel.app/api/vapi/generate",
+      headers: {
+        type: "object",
+        properties: {},
+      },
+      body: {
+        type: "object",
+        properties: {
+          role: {
+            type: "string",
+            description: "",
+            value: "{{role}}",
+          },
+          companyName: {
+            type: "string",
+            description: "",
+            value: "{{companyName}}",
+          },
+          type: {
+            type: "string",
+            description: "",
+            value: "{{type}}",
+          },
+          level: {
+            type: "string",
+            description: "",
+            value: "{{level}}",
+          },
+          techstack: {
+            type: "string",
+            description: "",
+            value: "{{techstack}}",
+          },
+          amount: {
+            type: "number",
+            description: "",
+            value: "{{amount}}",
+          },
+          userid: {
+            type: "string",
+            description: "",
+            value: "{{userid}}",
+          },
+        },
+      },
+      output: {
+        type: "object",
+        properties: {},
+      },
+      mode: "blocking",
+      hooks: [],
+    },
+    {
+      name: "conversation_1747809383338",
+      type: "conversation",
+      metadata: {
+        position: {
+          x: 472.5225524902344,
+          y: 760.2120056152344,
+        },
+      },
+      prompt:
+        "thank the user for their time, patience and inform them that the interview has been generated successfully.",
+      voice: {
+        provider: "deepgram",
+        voiceId: "theia",
+        model: "aura-2",
+      },
+    },
+  ],
+  edges: [
+    {
+      from: "start",
+      to: "conversation_1",
+      condition: {
+        type: "ai",
+        prompt: "If user provides all the require variables",
+      },
+    },
+    {
+      from: "conversation_1",
+      to: "apiRequest_1747809152762",
+      condition: {
+        type: "ai",
+        prompt: "",
+      },
+    },
+    {
+      from: "apiRequest_1747809152762",
+      to: "conversation_1747809383338",
+      condition: {
+        type: "ai",
+        prompt: "",
+      },
+    },
+    {
+      from: "conversation_1747809383338",
+      to: "hangup_1747512399374",
+      condition: {
+        type: "ai",
+        prompt: "",
+      },
+    },
+  ],
+  clientMessages: [],
+  serverMessages: [],
+};

@@ -6,15 +6,14 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import React from "react";
-import { set } from "zod";
+import React, { useState } from "react";
 
-const page = () => {
+const Page = () => {
   const searchParams = useSearchParams();
   const page = searchParams.get("page");
   const router = useRouter();
 
-  const [isActive, setIsActive] = React.useState<"course" | "deep">("course");
+  const [isActive, setIsActive] = useState<"course" | "deep">("course");
   const handleClick = (type: "course" | "deep") => {
     setIsActive(type);
     setData(null);
@@ -58,6 +57,7 @@ const page = () => {
         const response = await getDetails(value);
         setData(response);
         console.log(response);
+        console.log(isActive)
       }
     } catch (e) {
       console.error(e);
@@ -241,7 +241,7 @@ const page = () => {
                     (_, i) => {
                       const pageIndex = i + 1;
                       return (
-                        <div className={`${p === pageIndex ? "bg-[#ff7700]" : "bg-slate-500"} rounded-full size-3`} key={pageIndex}/>
+                        <div className={`${p === pageIndex ? "bg-[#ff7700]" : "bg-slate-500"} rounded-full size-3`} key={pageIndex} />
                       );
                     }
                   )}
@@ -299,22 +299,20 @@ const page = () => {
         </form>
         <div className="flex gap-2 w-[75%] md:w-[55%] lg:w-[35%] mx-auto mt-2">
           <button
-            className={`border-2 rounded-full px-4 ${
-              isActive === "course"
-                ? "bg-blue-500/40 border-blue-700 text-gray-300"
-                : "border-gray-500 bg-gray-500/40"
-            } cursor-pointer`}
+            className={`border-2 rounded-full px-4 ${isActive === "course"
+              ? "bg-blue-500/40 border-blue-700 text-gray-300"
+              : "border-gray-500 bg-gray-500/40"
+              } cursor-pointer`}
             onClick={() => handleClick("course")}
           >
             Course
           </button>
 
           <button
-            className={`border-2 rounded-full px-4 ${
-              isActive === "deep"
-                ? "bg-blue-500/40 border-blue-700 text-gray-300"
-                : "border-gray-500 bg-gray-500/40"
-            } cursor-pointer`}
+            className={`border-2 rounded-full px-4 ${isActive === "deep"
+              ? "bg-blue-500/40 border-blue-700 text-gray-300"
+              : "border-gray-500 bg-gray-500/40"
+              } cursor-pointer`}
             onClick={() => handleClick("deep")}
           >
             Deep search
@@ -325,4 +323,4 @@ const page = () => {
   );
 };
 
-export default page;
+export default Page;

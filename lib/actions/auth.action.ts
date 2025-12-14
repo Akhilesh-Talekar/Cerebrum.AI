@@ -68,6 +68,12 @@ export const signUp = async (params: SignUpParams) => {
 //   }
 // };
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  // Add other fields if needed (e.g., email, role, etc.)
+}
 // For gettiong the user and rout protectection
 export const getUser = async () => {
   const cookieStore = await cookies();
@@ -90,7 +96,7 @@ export const getUser = async () => {
     return {
       id: userRecord.id,
       ...userRecord.data(),
-    };
+    } as User;
   } catch (error: any) {
     console.log("Error getting user:", error.message);
     return null;
@@ -104,4 +110,4 @@ export const isAuthenticated = async () => {
     return false;
   }
   return true;
-}
+};

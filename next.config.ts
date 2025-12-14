@@ -1,5 +1,4 @@
 import type { NextConfig } from "next";
-import { hostname } from "os";
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -14,7 +13,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        hostname: "logo.clearbit.com",
+        hostname: "img.logo.dev",
       },
       {
         hostname: "i.ytimg.com",

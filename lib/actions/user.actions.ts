@@ -1,9 +1,8 @@
 "use server";
 import axios from "axios";
 import mammoth from "mammoth"; // For .docx
-import { generateText } from "ai";
-import { google } from "@ai-sdk/google";
-import { YoutubeTranscript } from "youtube-transcript";
+import { Innertube } from "youtubei.js";
+import { openai } from "../openai";
 
 type atsProp = {
   Description: string;
@@ -15,23 +14,24 @@ export const getAtsScore = async (data: atsProp) => {
   try {
     const { Description, document, docType } = data;
 
+    // Fetch the resume file (PDF, DOCX, etc.)
     const response = await axios.get(document, {
       responseType: "arraybuffer",
     });
 
+    // Extract raw text from file
     const buffer = Buffer.from(response.data);
-
     const { value: text } = await mammoth.extractRawText({ buffer });
 
-    const atsResponse = await generateText({
-      model: google("gemini-2.0-flash-001"),
-      prompt: `You are an Applicant Tracking System (ATS) designed to score resumes based on how well they match a given job description.
+    // 🔹 Create the prompt (unchanged)
+    const prompt = `
+You are an Applicant Tracking System (ATS) designed to score resumes based on how well they match a given job description.
 
 Job Description: ${
-        Description === ""
-          ? "No job description provided. Please generate a suitable prompt for scoring."
-          : Description
-      }
+      Description === ""
+        ? "No job description provided. Please generate a suitable prompt for scoring."
+        : Description
+    }
 
 Resume Text: ${text}
 
@@ -79,19 +79,25 @@ Check wether the skills match with the job description or not and if the resume 
     "negatives": string[]                // Major issues or areas for improvement return as an array
   },
 
-  "Recommendations": string            // Suggestions to improve the resume's effectiveness
-  "JobMatch": number                   // Percentage match with the job description or chances of passing ATS
-  "labels": string[]                // List of labels or tags that describe the resume's content keep them accordingly if overall score bad keep them bad if good keep them good
+  "Recommendations": string,            // Suggestions to improve the resume's effectiveness
+  "JobMatch": number,                   // Percentage match with the job description or chances of passing ATS
+  "labels": string[]                    // List of labels or tags that describe the resume's content keep them accordingly if overall score bad keep them bad if good keep them good
 }
+`;
 
-      `,
+    // 🔹 OpenAI call (replaces generateText)
+    const resp = await openai.responses.create({
+      model: "gpt-4o-mini",
+      input: prompt,
     });
 
-    const jsonText = atsResponse.text.trim();
+    // Extract text output
+    const jsonText = resp.output_text?.trim() ?? "";
     const firstBrace = jsonText.indexOf("{");
     const lastBrace = jsonText.lastIndexOf("}");
     const jsonSubstring = jsonText.substring(firstBrace, lastBrace + 1);
 
+    // Parse the AI JSON response
     const parsed = JSON.parse(jsonSubstring);
     return parsed;
   } catch (e: any) {
@@ -102,9 +108,9 @@ Check wether the skills match with the job description or not and if the resume 
 
 export const getCourseRecommendation = async (prompt: string) => {
   try {
-    const response = await generateText({
-      model: google("gemini-2.0-flash-001"),
-      prompt: `You are a course recommendation system.
+    // --- SAME PROMPT EXACTLY AS YOU WROTE ---
+    const fullPrompt = `
+You are a course recommendation system.
 Your job is to help users find the best and most relevant free YouTube videos for their learning goals or career interests.
 
 The user will give a long, natural-language input describing their aspirations, skills, or career objectives.
@@ -126,10 +132,20 @@ And most importantly if user search anything vulgar or inappropriate like relate
 
 Based on the user input below, respond strictly in as string format with the search query only. Do not include any additional text or explanations.:
 
-The user input is: ${prompt}`,
+The user input is: ${prompt}
+`;
+
+    // --- OPENAI CALL ---
+    const resp = await openai.responses.create({
+      model: "gpt-4o-mini",
+      input: fullPrompt,
     });
 
-    const { text } = response;
+    const text = resp.output_text?.trim() ?? "";
+
+    // --------------------
+    // YOUTUBE SEARCH
+    // --------------------
     const ytResponse = await axios.get(
       `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(
         text
@@ -143,16 +159,20 @@ The user input is: ${prompt}`,
   }
 };
 
-export const getDetails = async (url: string) => {
+export const getDetails = async (Id: string) => {
   try {
-    const transcript = await YoutubeTranscript.fetchTranscript(url);
-    const transcriptText = transcript
-      .map((item) => item.text)
-      .join(" ")
-      .replace(/<[^>]*>/g, "");
-    const response = await generateText({
-      model: google("gemini-2.0-flash-001"),
-      prompt: `You are a highly intelligent YouTube video summarization assistant.
+    const youtube = await Innertube.create();
+    const info = await youtube.getInfo(Id);
+
+    const cleanDescription = info.basic_info
+      .short_description!.replace(/[-#*=_]{2,}/g, "") // remove ---- or ====
+      .replace(/#[\w-]+/g, "") // remove hashtags
+      .replace(/\n{2,}/g, "\n") // fix multiple lines
+      .replace(/\s{2,}/g, " ") // fix multiple spaces
+      .trim();
+
+    // 🔹 SAME PROMPT EXACTLY — NO CHANGES
+    const prompt = `You are a highly intelligent YouTube video summarization assistant.
 
 Your task is to analyze the **transcript** of a YouTube video and return a detailed JSON object with the following fields:
 
@@ -181,13 +201,23 @@ Your task is to analyze the **transcript** of a YouTube video and return a detai
 ### Input:
 Transcript:
 """
-${transcriptText}`,
+${cleanDescription}`;
+
+    // 🔥 OPENAI CALL
+    const aiResp = await openai.responses.create({
+      model: "gpt-4o-mini",
+      input: prompt,
     });
 
-    const { text } = response;
+    const text = aiResp.output_text?.trim() ?? "";
+
+    // -------------------------
+    // JSON Extraction (same as before)
+    // -------------------------
     const firstBrace = text.indexOf("{");
     const lastBrace = text.lastIndexOf("}");
     const jsonSubstring = text.substring(firstBrace, lastBrace + 1);
+
     const parsed = JSON.parse(jsonSubstring);
     return parsed;
   } catch (e: any) {
@@ -196,20 +226,26 @@ ${transcriptText}`,
   }
 };
 
-export const getCoverLetter = async (data: {Description:string, document:string, tone: "professional" | "casual" | "energetic" | "enthusastic"}) => {
-  try{
-    const {Description, document, tone} = data;
+export const getCoverLetter = async (data: {
+  Description: string;
+  document: string;
+  tone: "professional" | "casual" | "energetic" | "enthusastic";
+}) => {
+  try {
+    const { Description, document, tone } = data;
+
+    // Fetch resume file
     const response = await axios.get(document, {
       responseType: "arraybuffer",
     });
 
     const buffer = Buffer.from(response.data);
 
+    // Extract raw resume text
     const { value: text } = await mammoth.extractRawText({ buffer });
 
-    const atsResponse = await generateText({
-  model: google("gemini-2.0-flash-001"),
-  prompt: `
+    // --- SAME PROMPT EXACTLY ---
+    const prompt = `
 You are a professional Cover Letter Generator.
 
 You will receive the following inputs:
@@ -233,16 +269,28 @@ When you're ready, I will provide:
 - jobDescription: string
 - tone: string
 Candidate's Resume: ${text}
-Job Description: ${Description ? Description : "No job description provided. Please generate a overall best coverletter."}
+Job Description: ${
+      Description
+        ? Description
+        : "No job description provided. Please generate a overall best coverletter."
+    }
 Tone: ${tone}
 Generate a well-structured cover letter based on the above inputs. Make sure to include the company name and role in the letter. The letter should be concise, professional, and tailored to the job description.
 Return only the cover letter text, without any additional commentary or explanations.
-`,
-});
+`;
 
-  return atsResponse.text.trim();
-  }catch(e:any){
+    // --- OPENAI CALL ---
+    const resp = await openai.responses.create({
+      model: "gpt-4o-mini",
+      input: prompt,
+    });
+
+    // Extract cover letter
+    const coverLetter = resp.output_text?.trim() ?? "";
+
+    return coverLetter;
+  } catch (e: any) {
     console.error("Error in getCoverLetter:", e);
     return { success: false, error: e.message };
   }
-}
+};
